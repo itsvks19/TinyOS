@@ -1,11 +1,9 @@
-
 ASM     = nasm
 CC      = gcc
 LD      = ld
-CFLAGS  = -ffreestanding -O2 -Wall -Wextra -m32 -g
-LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
-QEMU    = qemu-system-i386
-
+CFLAGS  = -ffreestanding -O2 -Wall -Wextra -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -g
+LDFLAGS = -m elf_x86_64 -T linker.ld -nostdlib
+QEMU    = qemu-system-x86_64
 BUILD   = build
 SRC     = src
 
@@ -13,7 +11,7 @@ all: $(BUILD)/os.iso
 
 $(BUILD)/boot.o: $(SRC)/boot.s
 	mkdir -p $(BUILD)
-	$(ASM) -f elf32 $(SRC)/boot.s -o $(BUILD)/boot.o
+	$(ASM) -f elf64 $(SRC)/boot.s -o $(BUILD)/boot.o
 
 $(BUILD)/kernel.o: $(SRC)/kernel.c
 	mkdir -p $(BUILD)

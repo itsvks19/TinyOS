@@ -1,9 +1,10 @@
+OUTPUT_FORMAT("elf64-x86-64")
 ENTRY(_start)
 SECTIONS
 {
-  . = 0x100000;     /* load at 1 MiB */
-  .text : { *(.multiboot) *(.text*) }
-  .rodata : { *(.rodata*) }
-  .data : { *(.data*) }
-  .bss : { *(.bss*) *(COMMON) }
+    . = 0x100000;
+    .text   : { *(.multiboot) *(.text*) }
+    .rodata : { *(.rodata*) }
+    .data   : { *(.data*) }
+    .bss    : { *(.bss*) *(COMMON) }
 }
