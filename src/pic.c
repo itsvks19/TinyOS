@@ -12,12 +12,12 @@ void pic_init(void) {
     io_wait(); // master: IRQ0-7  -> vectors 32-39
     outb(PIC2_DATA, IRQ_BASE + 8);
     io_wait(); // slave:  IRQ8-15 -> vectors 40-47
-    // ICW3 — master/slave wiring
+    // ICW3 - master/slave wiring
     outb(PIC1_DATA, 0x04);
     io_wait(); // master: slave is on IRQ2
     outb(PIC2_DATA, 0x02);
     io_wait(); // slave: its cascade identity = 2
-    // ICW4 — 8086 mode
+    // ICW4 - 8086 mode
     outb(PIC1_DATA, 0x01);
     io_wait();
     outb(PIC2_DATA, 0x01);

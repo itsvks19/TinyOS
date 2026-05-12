@@ -8,7 +8,8 @@ BUILD   = build
 SRC     = src
 
 OBJS = $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/pic.o \
-       $(BUILD)/idt.o $(BUILD)/keyboard.o $(BUILD)/kernel.o
+       $(BUILD)/idt.o $(BUILD)/keyboard.o \
+       $(BUILD)/framebuffer.o $(BUILD)/kernel.o
 
 all: $(BUILD)/os.iso
 
@@ -25,11 +26,14 @@ $(BUILD)/pic.o: $(SRC)/pic.c
 $(BUILD)/idt.o: $(SRC)/idt.c
 	$(CC) $(CFLAGS) -c $(SRC)/idt.c -o $(BUILD)/idt.o
 
-$(BUILD)/kernel.o: $(SRC)/kernel.c
-	$(CC) $(CFLAGS) -c $(SRC)/kernel.c -o $(BUILD)/kernel.o
-
 $(BUILD)/keyboard.o: $(SRC)/keyboard.c
 	$(CC) $(CFLAGS) -c $(SRC)/keyboard.c -o $(BUILD)/keyboard.o
+
+$(BUILD)/framebuffer.o: $(SRC)/framebuffer.c
+	$(CC) $(CFLAGS) -c $(SRC)/framebuffer.c -o $(BUILD)/framebuffer.o
+
+$(BUILD)/kernel.o: $(SRC)/kernel.c
+	$(CC) $(CFLAGS) -c $(SRC)/kernel.c -o $(BUILD)/kernel.o
 
 $(BUILD)/kernel.elf: $(OBJS) linker.ld
 	$(LD) $(LDFLAGS) $(OBJS) -o $(BUILD)/kernel.elf

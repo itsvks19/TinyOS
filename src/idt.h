@@ -5,8 +5,8 @@
 typedef struct __attribute__((packed)) {
     uint16_t offset_low;
     uint16_t selector;
-    uint8_t  ist;        // interrupt stack table index (0 = don't use)
-    uint8_t  type_attr;  // 0x8E = present, ring0, 64-bit interrupt gate
+    uint8_t ist;       // interrupt stack table index (0 = don't use)
+    uint8_t type_attr; // 0x8E = present, ring0, 64-bit interrupt gate
     uint16_t offset_mid;
     uint32_t offset_high;
     uint32_t reserved;
