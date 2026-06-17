@@ -12,7 +12,8 @@ OBJS = $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/pic.o \
        $(BUILD)/framebuffer.o $(BUILD)/terminal.o \
        $(BUILD)/shell.o $(BUILD)/timer.o \
 	   $(BUILD)/system.o $(BUILD)/kmalloc.o \
-       $(BUILD)/kernel.o
+       $(BUILD)/ata.o $(BUILD)/fs.o $(BUILD)/mouse.o $(BUILD)/gui.o \
+	   $(BUILD)/kernel.o
 
 all: $(BUILD)/os.iso
 
@@ -41,14 +42,26 @@ $(BUILD)/system.o: $(SRC)/system/system.c
 $(BUILD)/kmalloc.o: $(SRC)/memory/kmalloc.c
 	$(CC) $(CFLAGS) -c $(SRC)/memory/kmalloc.c -o $(BUILD)/kmalloc.o
 
+$(BUILD)/ata.o: $(SRC)/drivers/ata/ata.c
+	$(CC) $(CFLAGS) -c $(SRC)/drivers/ata/ata.c -o $(BUILD)/ata.o
+
+$(BUILD)/fs.o: $(SRC)/FileSystem/fs.c
+	$(CC) $(CFLAGS) -c $(SRC)/FileSystem/fs.c -o $(BUILD)/fs.o
+
 $(BUILD)/timer.o: $(SRC)/drivers/timer/timer.c
 	$(CC) $(CFLAGS) -c $(SRC)/drivers/timer/timer.c -o $(BUILD)/timer.o
 
 $(BUILD)/keyboard.o: $(SRC)/drivers/keyboard/keyboard.c
 	$(CC) $(CFLAGS) -c $(SRC)/drivers/keyboard/keyboard.c -o $(BUILD)/keyboard.o
 
+$(BUILD)/mouse.o: $(SRC)/drivers/Mouse/mouse.c
+	$(CC) $(CFLAGS) -c $(SRC)/drivers/Mouse/mouse.c -o $(BUILD)/mouse.o
+
 $(BUILD)/framebuffer.o: $(SRC)/framebuffer.c
 	$(CC) $(CFLAGS) -c $(SRC)/framebuffer.c -o $(BUILD)/framebuffer.o
+
+$(BUILD)/gui.o: $(SRC)/gui/gui.c
+	$(CC) $(CFLAGS) -c $(SRC)/gui/gui.c -o $(BUILD)/gui.o
 
 $(BUILD)/kernel.o: $(SRC)/kernel.c
 	$(CC) $(CFLAGS) -c $(SRC)/kernel.c -o $(BUILD)/kernel.o
@@ -64,7 +77,9 @@ $(BUILD)/os.iso: $(BUILD)/kernel.elf grub.cfg
     	xorriso -as mkisofs -R -J -o $(BUILD)/os.iso $(BUILD)/iso
 
 run: all
-	$(QEMU) -cdrom $(BUILD)/os.iso -m 512M
+	$(QEMU) -cdrom $(BUILD)/os.iso \
+	        -drive file=disk.img,format=raw \
+	        -m 512M
 
 rebuild: clean all
 clean:

@@ -27,3 +27,5 @@ void fb_fill_rect(int x, int y, int w, int h, color_t c);
 void fb_draw_char(int x, int y, char ch, color_t fg, color_t bg);
 void fb_draw_string(int x, int y, const char *s, color_t fg, color_t bg);
 void fb_draw_int(int x, int y, int n, color_t fg, color_t bg);
+void fb_present(void);
+void fb_enable_backbuffer(void);

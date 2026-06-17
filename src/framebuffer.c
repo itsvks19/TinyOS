@@ -1,5 +1,6 @@
 #include "framebuffer.h"
 #include "font8x8.h"
+#include "memory/kmalloc.h"
 #include "multiboot2.h"
 #include <stdint.h>
 
@@ -9,6 +10,7 @@ static uint32_t fb_w = 0;
 static uint32_t fb_h = 0;
 static uint8_t fb_bpp = 0;
 static uint8_t r_pos, g_pos, b_pos;
+static uint32_t *backbuffer;
 
 int fb_init(void *mb2_info) {
     mb2_tag_fb_t *fb = (mb2_tag_fb_t *)mb2_find_tag((mb2_info_t *)mb2_info, MB2_TAG_FB);
@@ -25,15 +27,52 @@ int fb_init(void *mb2_info) {
     return 0;
 }
 
+void fb_enable_backbuffer(void) {
+    if (backbuffer)
+        return;
+
+    backbuffer = kmalloc(fb_w * fb_h * sizeof(uint32_t));
+
+    if (!backbuffer)
+        return;
+
+    for (uint32_t i = 0; i < fb_w * fb_h; i++)
+        backbuffer[i] = 0;
+}
+
 int fb_width(void) { return (int)fb_w; }
 int fb_height(void) { return (int)fb_h; }
 
 void fb_put_pixel(int x, int y, color_t c) {
     if ((unsigned)x >= fb_w || (unsigned)y >= fb_h)
         return;
-    uint8_t *p = fb_addr + y * fb_pitch + x * (fb_bpp / 8);
+
     uint32_t px = ((uint32_t)c.r << r_pos) | ((uint32_t)c.g << g_pos) | ((uint32_t)c.b << b_pos);
-    *(uint32_t *)p = px;
+
+    if (backbuffer) {
+        backbuffer[y * fb_w + x] = px;
+        return;
+    }
+
+    uint8_t *p = fb_addr + y * fb_pitch + x * (fb_bpp / 8);
+
+    int bytes = fb_bpp / 8;
+
+    for (int i = 0; i < bytes; i++)
+        p[i] = (uint8_t)(px >> (8 * i));
+}
+
+void fb_present(void) {
+    if (!backbuffer)
+        return;
+
+    for (uint32_t y = 0; y < fb_h; y++) {
+        uint32_t *src = &backbuffer[y * fb_w];
+        uint32_t *dst = (uint32_t *)(fb_addr + y * fb_pitch);
+
+        for (uint32_t x = 0; x < fb_w; x++)
+            dst[x] = src[x];
+    }
 }
 
 void fb_clear(color_t c) {

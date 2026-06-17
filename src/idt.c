@@ -1,6 +1,7 @@
 #include "idt.h"
 #include "drivers/keyboard/keyboard.h"
 #include "drivers/timer/timer.h"
+#include "drivers/Mouse/mouse.h"
 #include "pic.h"
 #include <stdint.h>
 
@@ -117,6 +118,11 @@ void isr_handler(interrupt_frame_t *frame) {
 
             case 1:
                 keyboard_handler();
+                break;
+
+            case 12:
+                vga[0] = 0x2F00 | 'M';
+                mouse_handler();
                 break;
         }
 

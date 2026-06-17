@@ -1,34 +1,39 @@
 #include "shell.h"
-#include "terminal.h"
+#include "../FileSystem/fs.h"
+#include "../drivers/ata/ata.h"
 #include "../drivers/timer/timer.h"
 #include "../io.h"
-#include "../system/system.h"
 #include "../memory/kmalloc.h"
+#include "../system/system.h"
+#include "terminal.h"
 
-#define CMD_MAX 128
+#define CMD_MAX 256
 
 static char cmd_buf[CMD_MAX];
-static int cmd_len = 0;
+static int  cmd_len = 0;
+
+static void print_hex8(uint8_t value) {
+    const char hex[] = "0123456789ABCDEF";
+    terminal_putchar(hex[(value >> 4) & 0xF]);
+    terminal_putchar(hex[value & 0xF]);
+}
 
 static int str_eq(const char *a, const char *b) {
     while (*a && *b) {
-        if (*a != *b)
-            return 0;
-        a++;
-        b++;
+        if (*a != *b) return 0;
+        a++; b++;
     }
-
     return (*a == '\0' && *b == '\0');
 }
 
 static void show_prompt(void) {
+    terminal_print(fs_get_pwd());
     terminal_print("> ");
 }
 
 static void execute_command(void) {
     cmd_buf[cmd_len] = '\0';
     char *args = 0;
-
     for (int i = 0; cmd_buf[i]; i++) {
         if (cmd_buf[i] == ' ') {
             cmd_buf[i] = '\0';
@@ -38,78 +43,238 @@ static void execute_command(void) {
     }
 
     terminal_putchar('\n');
-
     if (str_eq(cmd_buf, "ver")) {
-        terminal_print("Nano OS v0.1\n");
-    }
-    else if (str_eq(cmd_buf, "help")) {
+        terminal_print("Nano OS v0.2  |  NanoFS v2\n");
+
+    } else if (str_eq(cmd_buf, "help")) {
         terminal_print("Commands:\n");
-        terminal_print("  ver\n");
-        terminal_print("  clear\n");
-        terminal_print("  help\n");
-        terminal_print("  say [text]\n");
-        terminal_print("  uptime\n");
-        terminal_print("  meminfo\n");
-        terminal_print("  alloc\n");
-        terminal_print("  reboot\n");
-    }
-    else if (str_eq(cmd_buf, "clear")) {
+        terminal_print("  System  : ver, help, clear, uptime, meminfo, reboot, shutdown\n");
+        terminal_print("  Disk    : diskread, diskwrite, format, mount\n");
+        terminal_print("  Files   : touch <name>, ls, cat <file>, write <file> <text>\n");
+        terminal_print("            append <file> <text>, rm <file>, mv <old> <new>\n");
+        terminal_print("            stat <name>\n");
+        terminal_print("  Dirs    : mkdir <name>, cd <dir>, pwd\n");
+        terminal_print("  Other   : say <text>, alloc\n");
+    } else if (str_eq(cmd_buf, "clear")) {
         terminal_clear();
-    }
-    else if (str_eq(cmd_buf, "say")) {
+    } else if (str_eq(cmd_buf, "say")) {
         if (args && *args) {
             terminal_print(args);
             terminal_putchar('\n');
         } else {
-            terminal_print("Usage: say [text]\n");
+            terminal_print("Usage: say <text>\n");
         }
-    }
-    else if (str_eq(cmd_buf, "uptime")) {
+    } else if (str_eq(cmd_buf, "uptime")) {
         uint64_t seconds = timer_get_ticks() / 100;
-
         terminal_print("Uptime: ");
         print_uint(seconds);
         terminal_print(" seconds\n");
-    }
-    else if (str_eq(cmd_buf, "reboot")) {
+    } else if (str_eq(cmd_buf, "reboot")) {
         terminal_print("Rebooting...\n");
         reboot_system();
-    }
-    else if (str_eq(cmd_buf, "meminfo")) {
-        terminal_print("Framebuffer: ");
+    } else if (str_eq(cmd_buf, "meminfo")) {
+        terminal_print("Framebuffer : ");
         print_uint(system_width);
         terminal_putchar('x');
         print_uint(system_height);
         terminal_putchar('\n');
-
-        terminal_print("Timer: ");
+        terminal_print("Timer       : ");
         print_uint(system_timer_hz);
         terminal_print(" Hz\n");
-
-        terminal_print("Ticks: ");
+        terminal_print("Ticks       : ");
         print_uint(timer_get_ticks());
         terminal_putchar('\n');
-        terminal_print("Heap: ");
+        terminal_print("Heap        : ");
         print_uint(kmalloc_used());
         terminal_print(" / ");
         print_uint(kmalloc_total());
         terminal_print(" bytes\n");
-        terminal_putchar('\n');
-    }
-    else if (str_eq(cmd_buf, "alloc")) {
+    } else if (str_eq(cmd_buf, "alloc")) {
         void *p = kmalloc(64);
-
-        if (p)
-            terminal_print("Allocated 64 bytes\n");
+        if (p) terminal_print("Allocated 64 bytes\n");
+        else   terminal_print("Out of memory\n");
+    } else if (str_eq(cmd_buf, "diskread")) {
+        uint8_t sector[512];
+        if (ata_read_sector(0, sector) != 0) {
+            terminal_print("Read failed\n");
+        } else {
+            for (int i = 0; i < 16; i++) {
+                print_hex8(sector[i]);
+                terminal_putchar(' ');
+            }
+            terminal_putchar('\n');
+        }
+    } else if (str_eq(cmd_buf, "diskwrite")) {
+        uint8_t sector[512] = {0};
+        sector[0] = 'N'; sector[1] = 'A'; sector[2] = 'N';
+        sector[3] = 'O'; sector[4] = 'O'; sector[5] = 'S';
+        if (ata_write_sector(0, sector) == 0)
+            terminal_print("Write successful\n");
         else
-            terminal_print("Out of memory\n");
-    }
-    else if (cmd_len != 0) {
-        terminal_print("Unknown command\n");
+            terminal_print("Write failed\n");
+    } else if (str_eq(cmd_buf, "format")) {
+        fs_format();
+        terminal_print("Disk formatted\n");
+    } else if (str_eq(cmd_buf, "mount")) {
+        if (fs_mount())
+            terminal_print("Filesystem mounted\n");
+        else
+            terminal_print("No filesystem found\n");
+    } else if (str_eq(cmd_buf, "touch")) {
+        if (!args || !*args) {
+            terminal_print("Usage: touch <name>\n");
+        } else {
+            int r = fs_create(args);
+            if      (r ==  0) terminal_print("File created\n");
+            else if (r == -1) terminal_print("Already exists\n");
+            else              terminal_print("Inode table full\n");
+        }
+    } else if (str_eq(cmd_buf, "ls")) {
+        fs_inode_t files[FS_MAX_INODES];
+        int count = fs_list(files, FS_MAX_INODES);
+        if (count == 0) {
+            terminal_print("(empty)\n");
+        } else {
+            for (int i = 0; i < count; i++) {
+                if (files[i].is_directory) {
+                    terminal_print("[DIR]  ");
+                    terminal_print(files[i].name);
+                } else {
+                    terminal_print("[FILE] ");
+                    terminal_print(files[i].name);
+                    terminal_print("  (");
+                    print_uint(files[i].size);
+                    terminal_print(" B)");
+                }
+                terminal_putchar('\n');
+            }
+        }
+    } else if (str_eq(cmd_buf, "write")) {
+        if (!args || !*args) {
+            terminal_print("Usage: write <file> <text>\n");
+        } else {
+            char *text = 0;
+            for (int i = 0; args[i]; i++) {
+                if (args[i] == ' ') {
+                    args[i] = '\0';
+                    text = &args[i + 1];
+                    break;
+                }
+            }
+            if (!text || !*text) {
+                terminal_print("Usage: write <file> <text>\n");
+            } else {
+                int r = fs_write(args, text);
+                if      (r ==  0) terminal_print("Written\n");
+                else if (r == -2) terminal_print("Is a directory\n");
+                else              terminal_print("File not found\n");
+            }
+        }
+    } else if (str_eq(cmd_buf, "append")) {
+        if (!args || !*args) {
+            terminal_print("Usage: append <file> <text>\n");
+        } else {
+            char *text = 0;
+            for (int i = 0; args[i]; i++) {
+                if (args[i] == ' ') {
+                    args[i] = '\0';
+                    text = &args[i + 1];
+                    break;
+                }
+            }
+            if (!text || !*text) {
+                terminal_print("Usage: append <file> <text>\n");
+            } else {
+                int r = fs_append(args, text);
+                if      (r ==  0) terminal_print("Appended\n");
+                else if (r == -2) terminal_print("Is a directory\n");
+                else              terminal_print("File not found\n");
+            }
+        }
+    } else if (str_eq(cmd_buf, "cat")) {
+        if (!args || !*args) {
+            terminal_print("Usage: cat <file>\n");
+        } else {
+            char buffer[FS_MAX_BLOCKS * 512];
+            int r = fs_read(args, buffer, sizeof(buffer));
+            if      (r >= 0) { terminal_print(buffer); terminal_putchar('\n'); }
+            else if (r == -2) terminal_print("Is a directory\n");
+            else              terminal_print("File not found\n");
+        }
+    } else if (str_eq(cmd_buf, "rm")) {
+        if (!args || !*args) {
+            terminal_print("Usage: rm <file>\n");
+        } else {
+            int r = fs_delete(args);
+            if      (r ==  0) terminal_print("Deleted\n");
+            else if (r == -2) terminal_print("Is a directory – use rmdir\n");
+            else              terminal_print("File not found\n");
+        }
+    } else if (str_eq(cmd_buf, "mv")) {
+        if (!args || !*args) {
+            terminal_print("Usage: mv <old> <new>\n");
+        } else {
+            char *newname = 0;
+            for (int i = 0; args[i]; i++) {
+                if (args[i] == ' ') {
+                    args[i] = '\0';
+                    newname = &args[i + 1];
+                    break;
+                }
+            }
+            if (!newname || !*newname) {
+                terminal_print("Usage: mv <old> <new>\n");
+            } else {
+                int r = fs_rename(args, newname);
+                if      (r ==  0) terminal_print("Renamed\n");
+                else if (r == -2) terminal_print("Name already taken\n");
+                else              terminal_print("File not found\n");
+            }
+        }
+    } else if (str_eq(cmd_buf, "stat")) {
+        if (!args || !*args) {
+            terminal_print("Usage: stat <name>\n");
+        } else {
+            fs_inode_t node;
+            if (fs_stat(args, &node) == 0) {
+                terminal_print("Name : "); terminal_print(node.name); terminal_putchar('\n');
+                terminal_print("Type : ");
+                terminal_print(node.is_directory ? "directory" : "file");
+                terminal_putchar('\n');
+                terminal_print("Size : "); print_uint(node.size); terminal_print(" bytes\n");
+            } else {
+                terminal_print("Not found\n");
+            }
+        }
+    } else if (str_eq(cmd_buf, "mkdir")) {
+        if (!args || !*args) {
+            terminal_print("Usage: mkdir <name>\n");
+        } else {
+            int r = fs_mkdir(args);
+            if      (r ==  0) terminal_print("Directory created\n");
+            else if (r == -1) terminal_print("Already exists\n");
+            else              terminal_print("Inode table full\n");
+        }
+    } else if (str_eq(cmd_buf, "cd")) {
+        if (!args || !*args) {
+            terminal_print("Usage: cd <directory>\n");
+        } else {
+            int r = fs_change_dir(args);
+            if      (r == -1) terminal_print("Not found\n");
+            else if (r == -2) terminal_print("Not a directory\n");
+        }
+    } else if (str_eq(cmd_buf, "pwd")) {
+        terminal_print(fs_get_pwd());
+        terminal_putchar('\n');
+    } else if (str_eq(cmd_buf, "shutdown")) {
+        shutdown_system();
+    } else if (cmd_len != 0) {
+        terminal_print("Unknown command: ");
+        terminal_print(cmd_buf);
+        terminal_putchar('\n');
     }
 
     cmd_len = 0;
-
     show_prompt();
 }
 
@@ -122,19 +287,14 @@ void shell_input(char c) {
         execute_command();
         return;
     }
-
     if (c == '\b') {
         if (cmd_len > 0) {
             cmd_len--;
             terminal_putchar('\b');
         }
-
         return;
     }
-
-    if (cmd_len >= CMD_MAX - 1)
-        return;
-
+    if (cmd_len >= CMD_MAX - 1) return;
     cmd_buf[cmd_len++] = c;
     terminal_putchar(c);
 }
@@ -142,28 +302,25 @@ void shell_input(char c) {
 void print_uint(uint64_t value) {
     char buf[21];
     int i = 0;
-
-    if (value == 0) {
-        terminal_putchar('0');
-        return;
-    }
-
+    if (value == 0) { terminal_putchar('0'); return; }
     while (value > 0) {
         buf[i++] = '0' + (value % 10);
         value /= 10;
     }
-
-    while (i > 0) {
+    while (i > 0)
         terminal_putchar(buf[--i]);
-    }
 }
 
 void reboot_system(void) {
-    while (inb(0x64) & 0x02)
-        ;
-
+    while (inb(0x64) & 0x02);
     outb(0x64, 0xFE);
+    for (;;) __asm__ volatile("hlt");
+}
 
-    for (;;)
-        __asm__ volatile("hlt");
+void shutdown_system(void) {
+    terminal_print("Shutting down...\n");
+    outw(0xB004, 0x2000);
+    outw(0x604,  0x2000);
+    outw(0x4004, 0x3400);
+    for (;;) __asm__ volatile("hlt");
 }

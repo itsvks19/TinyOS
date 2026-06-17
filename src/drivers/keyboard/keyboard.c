@@ -1,5 +1,6 @@
 #include "keyboard.h"
 #include "../../io.h"
+#include "../../terminal/shell.h"
 #include <stdint.h>
 
 #define PS2_DATA 0x60
@@ -80,7 +81,8 @@ void keyboard_handler(void) {
     int upper = shift ^ caps; // caps only affects letters; fine for now
     c = upper ? sc_ascii_shift[sc] : sc_ascii[sc];
     if (c)
-        buf_push(c);
+        // buf_push(c);
+        shell_input(c);
 }
 
 // Unmask IRQ1 in the PIC
