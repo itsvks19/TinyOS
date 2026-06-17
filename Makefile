@@ -10,7 +10,9 @@ SRC     = src
 OBJS = $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/pic.o \
        $(BUILD)/idt.o $(BUILD)/keyboard.o \
        $(BUILD)/framebuffer.o $(BUILD)/terminal.o \
-       $(BUILD)/shell.o $(BUILD)/kernel.o
+       $(BUILD)/shell.o $(BUILD)/timer.o \
+	   $(BUILD)/system.o $(BUILD)/kmalloc.o \
+       $(BUILD)/kernel.o
 
 all: $(BUILD)/os.iso
 
@@ -32,6 +34,15 @@ $(BUILD)/terminal.o: $(SRC)/terminal/terminal.c
 
 $(BUILD)/shell.o: $(SRC)/terminal/shell.c
 	$(CC) $(CFLAGS) -c $(SRC)/terminal/shell.c -o $(BUILD)/shell.o
+
+$(BUILD)/system.o: $(SRC)/system/system.c
+	$(CC) $(CFLAGS) -c $(SRC)/system/system.c -o $(BUILD)/system.o
+
+$(BUILD)/kmalloc.o: $(SRC)/memory/kmalloc.c
+	$(CC) $(CFLAGS) -c $(SRC)/memory/kmalloc.c -o $(BUILD)/kmalloc.o
+
+$(BUILD)/timer.o: $(SRC)/drivers/timer/timer.c
+	$(CC) $(CFLAGS) -c $(SRC)/drivers/timer/timer.c -o $(BUILD)/timer.o
 
 $(BUILD)/keyboard.o: $(SRC)/drivers/keyboard/keyboard.c
 	$(CC) $(CFLAGS) -c $(SRC)/drivers/keyboard/keyboard.c -o $(BUILD)/keyboard.o
