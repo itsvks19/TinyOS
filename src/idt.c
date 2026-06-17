@@ -1,5 +1,6 @@
 #include "idt.h"
-#include "keyboard.h"
+#include "drivers/keyboard/keyboard.h"
+#include "drivers/timer/timer.h"
 #include "pic.h"
 #include <stdint.h>
 
@@ -108,8 +109,17 @@ void isr_handler(interrupt_frame_t *frame) {
 
     } else if (n >= 0x20 && n < 0x30) {
         uint8_t irq = (uint8_t)(n - 0x20);
-        if (irq == 1)
-            keyboard_handler();
+
+        switch (irq) {
+            case 0:
+                timer_handler();
+                break;
+
+            case 1:
+                keyboard_handler();
+                break;
+        }
+
         pic_send_eoi(irq);
     }
     // vectors 48-255: spurious, ignore

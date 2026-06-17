@@ -9,7 +9,10 @@ SRC     = src
 
 OBJS = $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/pic.o \
        $(BUILD)/idt.o $(BUILD)/keyboard.o \
-       $(BUILD)/framebuffer.o $(BUILD)/kernel.o
+       $(BUILD)/framebuffer.o $(BUILD)/terminal.o \
+       $(BUILD)/shell.o $(BUILD)/timer.o \
+	   $(BUILD)/system.o $(BUILD)/kmalloc.o \
+       $(BUILD)/kernel.o
 
 all: $(BUILD)/os.iso
 
@@ -26,8 +29,23 @@ $(BUILD)/pic.o: $(SRC)/pic.c
 $(BUILD)/idt.o: $(SRC)/idt.c
 	$(CC) $(CFLAGS) -c $(SRC)/idt.c -o $(BUILD)/idt.o
 
-$(BUILD)/keyboard.o: $(SRC)/keyboard.c
-	$(CC) $(CFLAGS) -c $(SRC)/keyboard.c -o $(BUILD)/keyboard.o
+$(BUILD)/terminal.o: $(SRC)/terminal/terminal.c
+	$(CC) $(CFLAGS) -c $(SRC)/terminal/terminal.c -o $(BUILD)/terminal.o
+
+$(BUILD)/shell.o: $(SRC)/terminal/shell.c
+	$(CC) $(CFLAGS) -c $(SRC)/terminal/shell.c -o $(BUILD)/shell.o
+
+$(BUILD)/system.o: $(SRC)/system/system.c
+	$(CC) $(CFLAGS) -c $(SRC)/system/system.c -o $(BUILD)/system.o
+
+$(BUILD)/kmalloc.o: $(SRC)/memory/kmalloc.c
+	$(CC) $(CFLAGS) -c $(SRC)/memory/kmalloc.c -o $(BUILD)/kmalloc.o
+
+$(BUILD)/timer.o: $(SRC)/drivers/timer/timer.c
+	$(CC) $(CFLAGS) -c $(SRC)/drivers/timer/timer.c -o $(BUILD)/timer.o
+
+$(BUILD)/keyboard.o: $(SRC)/drivers/keyboard/keyboard.c
+	$(CC) $(CFLAGS) -c $(SRC)/drivers/keyboard/keyboard.c -o $(BUILD)/keyboard.o
 
 $(BUILD)/framebuffer.o: $(SRC)/framebuffer.c
 	$(CC) $(CFLAGS) -c $(SRC)/framebuffer.c -o $(BUILD)/framebuffer.o
@@ -42,8 +60,8 @@ $(BUILD)/os.iso: $(BUILD)/kernel.elf grub.cfg
 	mkdir -p $(BUILD)/iso/boot/grub
 	cp $(BUILD)/kernel.elf $(BUILD)/iso/boot/
 	cp grub.cfg $(BUILD)/iso/boot/grub/
-	grub2-mkrescue -o $(BUILD)/os.iso $(BUILD)/iso 2>/dev/null || \
-		xorriso -as mkisofs -R -J -o $(BUILD)/os.iso $(BUILD)/iso
+	grub-mkrescue -o $(BUILD)/os.iso $(BUILD)/iso || \
+    	xorriso -as mkisofs -R -J -o $(BUILD)/os.iso $(BUILD)/iso
 
 run: all
 	$(QEMU) -cdrom $(BUILD)/os.iso -m 512M
