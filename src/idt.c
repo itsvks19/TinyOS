@@ -1,7 +1,7 @@
 #include "idt.h"
 #include "drivers/keyboard/keyboard.h"
 #include "drivers/timer/timer.h"
-#include "drivers/Mouse/mouse.h"
+#include "drivers/mouse/mouse.h"
 #include "pic.h"
 #include <stdint.h>
 

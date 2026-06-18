@@ -1,5 +1,5 @@
 #include "shell.h"
-#include "../FileSystem/fs.h"
+#include "../fs/fs.h"
 #include "../drivers/ata/ata.h"
 #include "../drivers/timer/timer.h"
 #include "../io.h"

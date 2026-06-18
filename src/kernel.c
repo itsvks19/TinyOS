@@ -2,7 +2,7 @@
 #include "idt.h"
 #include "drivers/timer/timer.h"
 #include "drivers/keyboard/keyboard.h"
-#include "drivers/Mouse/mouse.h"
+#include "drivers/mouse/mouse.h"
 #include "terminal/terminal.h"
 #include "terminal/shell.h"
 #include "system/system.h"
