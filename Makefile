@@ -69,17 +69,16 @@ $(BUILD)/kernel.o: $(SRC)/kernel.c
 $(BUILD)/kernel.elf: $(OBJS) linker.ld
 	$(LD) $(LDFLAGS) $(OBJS) -o $(BUILD)/kernel.elf
 
+GRUB_MKRESCUE := $(shell command -v grub-mkrescue 2>/dev/null || command -v grub2-mkrescue 2>/dev/null)
+
 $(BUILD)/os.iso: $(BUILD)/kernel.elf grub.cfg
 	mkdir -p $(BUILD)/iso/boot/grub
 	cp $(BUILD)/kernel.elf $(BUILD)/iso/boot/
 	cp grub.cfg $(BUILD)/iso/boot/grub/
-	grub-mkrescue -o $(BUILD)/os.iso $(BUILD)/iso || \
-    	xorriso -as mkisofs -R -J -o $(BUILD)/os.iso $(BUILD)/iso
+	$(GRUB_MKRESCUE) -o $(BUILD)/os.iso $(BUILD)/iso
 
 run: all
-	$(QEMU) -cdrom $(BUILD)/os.iso \
-	        -drive file=disk.img,format=raw \
-	        -m 512M
+	$(QEMU) -cdrom $(BUILD)/os.iso -m 512M
 
 rebuild: clean all
 clean:

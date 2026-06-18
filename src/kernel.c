@@ -9,8 +9,42 @@
 #include "memory/kmalloc.h"
 #include "gui/gui.h"
 
-/*NOT DEVELOPED FULLY BUGS LIKE FLICKERING AND LAG MOUSE INPUT*/
+void kmain(void *mb2_info) {
+    if (fb_init(mb2_info) != 0)
+        for (;;) __asm__ volatile("hlt");
 
+    kmalloc_init();
+    fb_enable_backbuffer();
+
+    system_width    = fb_width();
+    system_height   = fb_height();
+    system_timer_hz = 60;        // 60 ticks/sec = 60fps max
+
+    terminal_init(system_width, system_height);
+
+    idt_init();
+    keyboard_init();
+    mouse_init();
+    timer_init(system_timer_hz);
+    shell_init();
+
+    uint64_t last_tick = 0;
+
+    for (;;) {
+        __asm__ volatile("hlt");  // sleep until any interrupt
+
+        // only render when a new timer tick has fired
+        if (timer_ticks == last_tick)
+            continue;
+        last_tick = timer_ticks;
+
+        mouse_tick();
+        gui_update();
+        gui_draw();
+    }
+}
+
+/*for  earilier debug uses */
 // void kmain(void *mb2_info) {
 //     if (fb_init(mb2_info) != 0) {
 //         for (;;)
@@ -22,51 +56,18 @@
 
 //     system_width = fb_width();
 //     system_height = fb_height();
-//     system_timer_hz = 100;
 
 //     terminal_init(system_width, system_height);
 
 //     idt_init();
 //     keyboard_init();
-//     mouse_init();
-//     timer_init(system_timer_hz);
+
 //     shell_init();
+
+//     terminal_print("NanoOS\n");
+//     terminal_print("Type 'help' for available commands.\n\n/>");
 
 //     for (;;) {
 //         __asm__ volatile("hlt");
-
-//         mouse_tick();
-
-//         gui_update();
-//         gui_draw();
-
-//         cursor_draw();
 //     }
 // }
-
-void kmain(void *mb2_info) {
-    if (fb_init(mb2_info) != 0) {
-        for (;;)
-            __asm__ volatile("hlt");
-    }
-
-    kmalloc_init();
-    fb_enable_backbuffer();
-
-    system_width = fb_width();
-    system_height = fb_height();
-
-    terminal_init(system_width, system_height);
-
-    idt_init();
-    keyboard_init();
-
-    shell_init();
-
-    terminal_print("NanoOS\n");
-    terminal_print("Type 'help' for available commands.\n\n/>");
-
-    for (;;) {
-        __asm__ volatile("hlt");
-    }
-}

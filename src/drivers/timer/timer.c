@@ -20,7 +20,6 @@ void timer_init(uint32_t frequency) {
     uint8_t mask = inb(PIC1_DATA);
     outb(PIC1_DATA, mask & ~(1 << 0));
 }
-
 void timer_handler(void) {
     timer_ticks++;
 }

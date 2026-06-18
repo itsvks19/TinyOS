@@ -116,35 +116,27 @@ int mouse_tick(void) {
         return 0;
     packet_ready = 0;
 
-    buttons = packet[0] & 0x07;
     uint8_t new_buttons = packet[0] & 0x07;
 
     int dx = (int8_t)packet[1];
     int dy = -(int8_t)packet[2];
-
-    if (packet[0] & 0x40)
-        dx = 0;
-    if (packet[0] & 0x80)
-        dy = 0;
+    if (packet[0] & 0x40) dx = 0;
+    if (packet[0] & 0x80) dy = 0;
 
     int new_x = mouse_x + dx;
     int new_y = mouse_y + dy;
 
-    if (new_x < 0)
-        new_x = 0;
-    if (new_y < 0)
-        new_y = 0;
-    if (new_x >= fb_width())
-        new_x = fb_width() - 1;
-    if (new_y >= fb_height())
-        new_y = fb_height() - 1;
+    if (new_x < 0) new_x = 0;
+    if (new_y < 0) new_y = 0;
+    if (new_x >= fb_width())  new_x = fb_width()  - 1;
+    if (new_y >= fb_height()) new_y = fb_height() - 1;
 
     if (new_x == mouse_x && new_y == mouse_y && new_buttons == buttons)
         return 0;
 
-    mouse_x = new_x;
-    mouse_y = new_y;
-    buttons = new_buttons;
+    mouse_x  = new_x;
+    mouse_y  = new_y;
+    buttons  = new_buttons;
 
     return 1;
 }
